@@ -40,7 +40,7 @@ jobs:
           # -Duint=unsigned : 'uint' is Linux-only
           # _ALLOW_COMPILER_AND_STL_VERSION_MISMATCH : new MSVC STL otherwise rejects CUDA < 12.4
           NVCC_APPEND_FLAGS: "-allow-unsupported-compiler -w -Duint=unsigned -D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH"
-          CL: "/D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH"
+          CL: "-D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH"
           # RTX A2000 = Ampere = 8.6
           TORCH_CUDA_ARCH_LIST: "8.6"
           MAX_JOBS: "1"
