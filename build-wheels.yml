@@ -1,0 +1,39 @@
+name: build-windows-wheels
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - uses: Jimver/cuda-toolkit@v0.2.19
+        with:
+          cuda: '12.4.0'
+          method: network
+          sub-packages: '["nvcc","cudart","thrust","visual_studio_integration","cublas_dev","cusparse_dev","cusolver_dev","curand_dev"]'
+
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build wheels
+        shell: bash
+        env:
+          DISTUTILS_USE_SDK: "1"
+          NVCC_APPEND_FLAGS: "-allow-unsupported-compiler"
+          TORCH_CUDA_ARCH_LIST: "7.5;8.0;8.6;8.9;9.0+PTX"
+        run: |
+          pip install torch==2.5.0 --index-url https://download.pytorch.org/whl/cu124
+          pip install wheel setuptools ninja numpy
+          pip wheel ./cuda --no-build-isolation --no-deps -w dist
+          pip wheel git+https://github.com/rahul-goel/fused-ssim/ --no-build-isolation --no-deps -w dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: svrecon-win-wheels
+          path: dist/*.whl
