@@ -25,8 +25,9 @@ jobs:
         shell: bash
         env:
           DISTUTILS_USE_SDK: "1"
-          NVCC_APPEND_FLAGS: "-allow-unsupported-compiler"
-          TORCH_CUDA_ARCH_LIST: "7.5;8.0;8.6;8.9;9.0+PTX"
+          NVCC_APPEND_FLAGS: "-allow-unsupported-compiler -w"
+          TORCH_CUDA_ARCH_LIST: "8.6"
+          MAX_JOBS: "1"
         run: |
           pip install torch==2.5.0 --index-url https://download.pytorch.org/whl/cu124
           pip install wheel setuptools ninja numpy
