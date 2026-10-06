@@ -39,6 +39,7 @@ jobs:
           MAX_JOBS: "1"
         run: |
           set -o pipefail
+          export PATH="$(cygpath -u "$VCToolsInstallDir")bin/HostX64/x64:$PATH"
           pip install torch==2.5.0 --index-url https://download.pytorch.org/whl/cu124
           pip install wheel setuptools ninja numpy
           pip wheel ./cuda --no-build-isolation --no-deps -w dist -v 2>&1 | tee build.log || {
