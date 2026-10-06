@@ -1,12 +1,4 @@
 name: build-windows-wheels
-      - name: Patch sources for Windows
-        shell: bash
-        run: |
-          cd cuda
-          for f in $(grep -rlE '\b(near|far)\b' src binding.cpp --include='*.cu' --include='*.h' --include='*.cuh' --include='*.cpp' || true); do
-            sed -i -E 's/\bnear\b/near_plane/g; s/\bfar\b/far_plane/g' "$f"
-            echo "patched near/far in $f"
-          done
 on: workflow_dispatch
 
 jobs:
@@ -29,6 +21,15 @@ jobs:
 
       - uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Patch sources for Windows
+        shell: bash
+        run: |
+          cd cuda
+          for f in $(grep -rlE '\b(near|far)\b' src binding.cpp --include='*.cu' --include='*.h' --include='*.cuh' --include='*.cpp' || true); do
+            sed -i -E 's/\bnear\b/near_plane/g; s/\bfar\b/far_plane/g' "$f"
+            echo "patched near/far in $f"
+          done
+
       - name: Build wheels
         shell: bash
         env:
@@ -37,12 +38,20 @@ jobs:
           TORCH_CUDA_ARCH_LIST: "8.6"
           MAX_JOBS: "1"
         run: |
+          set -o pipefail
           pip install torch==2.5.0 --index-url https://download.pytorch.org/whl/cu124
           pip install wheel setuptools ninja numpy
-          pip wheel ./cuda --no-build-isolation --no-deps -w dist
+          pip wheel ./cuda --no-build-isolation --no-deps -w dist -v 2>&1 | tee build.log || {
+            echo "================ ERRORS ================"
+            grep -n -i -E "error|FAILED:" build.log | grep -v -i "warning" | head -60
+            exit 1
+          }
           pip wheel git+https://github.com/rahul-goel/fused-ssim/ --no-build-isolation --no-deps -w dist
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: svrecon-win-wheels
-          path: dist/*.whl
+          name: build-output
+          path: |
+            dist/*.whl
+            build.log
