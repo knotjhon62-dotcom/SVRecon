@@ -1,4 +1,12 @@
 name: build-windows-wheels
+      - name: Patch sources for Windows
+        shell: bash
+        run: |
+          cd cuda
+          for f in $(grep -rlE '\b(near|far)\b' src binding.cpp --include='*.cu' --include='*.h' --include='*.cuh' --include='*.cpp' || true); do
+            sed -i -E 's/\bnear\b/near_plane/g; s/\bfar\b/far_plane/g' "$f"
+            echo "patched near/far in $f"
+          done
 on: workflow_dispatch
 
 jobs:
@@ -25,7 +33,7 @@ jobs:
         shell: bash
         env:
           DISTUTILS_USE_SDK: "1"
-          NVCC_APPEND_FLAGS: "-allow-unsupported-compiler -w"
+          NVCC_APPEND_FLAGS: "-allow-unsupported-compiler -w -Duint=unsigned"
           TORCH_CUDA_ARCH_LIST: "8.6"
           MAX_JOBS: "1"
         run: |
