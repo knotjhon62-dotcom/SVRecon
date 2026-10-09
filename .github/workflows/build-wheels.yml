@@ -1,4 +1,4 @@
-name: build-windows-wheels
+name: build-windows-wheels_cuda12
 on: workflow_dispatch
 
 jobs:
