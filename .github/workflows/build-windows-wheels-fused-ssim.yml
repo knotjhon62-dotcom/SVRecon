@@ -1,0 +1,59 @@
+name: build-windows-wheels-fused-ssim
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - name: Get fused-ssim sources
+        shell: bash
+        run: |
+          git clone --depth 1 https://github.com/rahul-goel/fused-ssim.git fused_ssim_src
+          ls -la fused_ssim_src
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      # CUDA 12.4.0 to match torch 2.5.0+cu124
+      - uses: Jimver/cuda-toolkit@v0.2.19
+        with:
+          cuda: '12.4.0'
+          method: network
+          use-github-cache: false
+          sub-packages: '["nvcc","cudart","thrust","visual_studio_integration","cublas_dev","cusparse_dev","cusolver_dev","curand_dev"]'
+
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build wheel
+        shell: bash
+        env:
+          DISTUTILS_USE_SDK: "1"
+          NVCC_APPEND_FLAGS: "-allow-unsupported-compiler -Duint=unsigned -D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH"
+          CL: "-D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH"
+          # Target architecture (e.g., Ampere = 8.6, adjust as needed)
+          TORCH_CUDA_ARCH_LIST: "8.6"
+          MAX_JOBS: "1"
+        run: |
+          set -o pipefail
+          # Make MSVC link.exe win over Git's /usr/bin/link.exe
+          export PATH="$(cygpath -u "$VCToolsInstallDir")bin/HostX64/x64:$PATH"
+          
+          pip install torch==2.5.0 --index-url https://download.pytorch.org/whl/cu124
+          pip install wheel setuptools ninja numpy build
+          
+          pip wheel ./fused_ssim_src --no-build-isolation --no-deps -w dist -v 2>&1 | tee build.log || {
+            echo "================ ERRORS ================"
+            grep -n -i -E "error|FAILED:" build.log | grep -v -i "warning" | head -60
+            exit 1
+          }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fused-ssim-cu124-torch2.5.0-py310
+          path: |
+            dist/*.whl
+            build.log
